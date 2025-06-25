@@ -1,0 +1,85 @@
+name: CI/CD Pipeline for URL Shortener
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Run tests
+        run: mvn test
+
+  build-and-push-docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Only push image on main branch
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image with Jib
+        run: mvn compile jib:build -Dimage=your-dockerhub-username/url-shortener:${{ github.sha }}
+          # Use github.sha as the image tag for unique versions
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy-to-kubernetes:
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Only deploy on main branch
+    environment: production # Define a GitHub environment for deployment (optional)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2 # Or use actions/setup-kubectl and kubectl kustomize
+        with:
+          kustomize-version: '5.x.x' # Use a specific version
+
+      - name: Configure Kubernetes credentials
+        uses: azure/k8s-set-context@v3 # Example for Azure AKS. Adapt for EKS, GKE, or generic Kubeconfig.
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }} # Store your kubeconfig as a GitHub Secret
+
+      - name: Update image tag in Kustomize overlay
+        run: |
+          cd kustomize/overlays/prod
+          kustomize edit set image your-dockerhub-username/url-shortener=your-dockerhub-username/url-shortener:${{ github.sha }}
+
+      - name: Deploy with Kustomize
+        run: kubectl apply -k kustomize/overlays/prod
