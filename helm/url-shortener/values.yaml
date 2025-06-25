@@ -1,0 +1,45 @@
+replicaCount: 2
+
+image:
+  repository: your-dockerhub-username/url-shortener
+  pullPolicy: IfNotPresent
+  tag: "latest" # Overridden by CI/CD
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+env:
+  DB_HOST: postgresql-service
+  DB_NAME: url_shortener_db
+  DB_USERNAME: user
+  DB_PASSWORD: password
+  REDIS_HOST: redis-service
+
+config:
+  baseUrl: http://localhost:8080/ # Default, override in environments
+  shortCodeLength: 6
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1024Mi"
+    cpu: "500m"
+
+# Ingress configuration (optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: chart-example.local
+  tls: []
+
+# Secret for database credentials
+secret:
+  dbHost: postgresql-service
+  dbName: url_shortener_db
+  dbUsername: user
+  dbPassword: password
