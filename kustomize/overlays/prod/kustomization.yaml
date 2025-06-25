@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../../base # Path to your base configurations
+
+patches:
+  - path: patch-deployment.yaml # Patch the deployment for production specifics
+  - target:
+      kind: Service
+      name: url-shortener-service
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: LoadBalancer # Expose externally
+
+# Or add an Ingress instead of LoadBalancer
+# resources:
+#   - ingress.yaml # You would create an ingress.yaml for your domain
+
+images:
+  - name: your-dockerhub-username/url-shortener # The base image name
+    newTag: <VERSION_TAG> # This will be replaced by CI/CD with actual image tag (e.g., Git SHA)
