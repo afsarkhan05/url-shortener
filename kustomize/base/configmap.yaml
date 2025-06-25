@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-shortener-config
+data:
+  redis_host: redis-service # Assuming a Redis service named 'redis-service'
+  url-shortener.base-url: http://your-domain.com/ # Important: Change this in actual deployment!
+  url-shortener.short-code-length: "6"
