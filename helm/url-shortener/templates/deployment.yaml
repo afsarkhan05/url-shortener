@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "url-shortener.fullname" . }}
+  labels:
+    {{- include "url-shortener.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "url-shortener.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "url-shortener.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "url-shortener.fullname" . }}-db-creds
+              key: dbHost
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "url-shortener.fullname" . }}-db-creds
+              key: dbName
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "url-shortener.fullname" . }}-db-creds
+              key: dbUsername
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "url-shortener.fullname" . }}-db-creds
+              key: dbPassword
+        - name: REDIS_HOST
+          value: {{ .Values.env.REDIS_HOST }}
+        - name: url-shortener.base-url
+          value: {{ .Values.config.baseUrl }}
+        - name: url-shortener.short-code-length
+          value: "{{ .Values.config.shortCodeLength }}"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: http
+          initialDelaySeconds: 45
+          periodSeconds: 15
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
