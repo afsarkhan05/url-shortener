@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-deployment
+spec:
+  replicas: 5 # More replicas for production
+  template:
+    spec:
+      containers:
+      - name: url-shortener
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "500m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+        env:
+        - name: url-shortener.base-url
+          value: https://your-prod-domain.com/ # Production domain
