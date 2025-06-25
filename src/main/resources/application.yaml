@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:url_shortener_db}
+    username: ${DB_USERNAME:user}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # In production, use 'none' and managed migrations (Flyway/Liquibase)
+    show-sql: true
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: 6379
+
+server:
+  port: 8080
+
+url-shortener:
+  base-url: http://localhost:8080/
+  short-code-length: 6 # Length of the generated short code
